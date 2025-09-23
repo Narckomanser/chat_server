@@ -12,7 +12,8 @@ RUN apt-get update  \
 WORKDIR /app
 COPY . .
 
-RUN mkdir -p build && cd build && cmake .. && cmake --build .
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build build --parallel
 
 FROM ubuntu:24.04 AS runtime
 RUN apt-get update &&  \
