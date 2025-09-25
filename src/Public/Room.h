@@ -10,9 +10,9 @@ class Session;
 class Room : public std::enable_shared_from_this<Room>
 {
 public:
-    Room(std::string name);
+    explicit Room(std::string name);
 
-    const std::string get_room_name() const { return room_name_; };
+    std::string get_room_name() const { return room_name_; };
     std::vector<std::string> get_members() const;
 
     void join(std::shared_ptr<Session>& sesson);
