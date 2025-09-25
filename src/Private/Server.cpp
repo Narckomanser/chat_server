@@ -1,10 +1,12 @@
 #include "../Public/Server.h"
 
-#include "iostream"
+#include <iostream>
+
+#include "../Public/Session.h"
 
 using boost::asio::ip::tcp;
 
-Server::Server(boost::asio::io_context& context, uint16_t port) : acceptor_(tcp::acceptor(context, tcp::endpoint(tcp::v4(), port)))
+Server::Server(boost::asio::io_context& context, uint16_t port) : acceptor_(context, tcp::endpoint(tcp::v4(), port))
 {
     acceptor_.set_option(boost::asio::socket_base::reuse_address(true));
 }
@@ -17,7 +19,7 @@ void Server::start_accept()
 void Server::remove_session(const std::shared_ptr<Session>& session)
 {
     if (auto it_to_remove = sessions_.find(session); it_to_remove != sessions_.end())
-    sessions_.erase(session);
+    sessions_.erase(it_to_remove);
 }
 
 void Server::do_accept()
@@ -32,7 +34,7 @@ void Server::on_accept(std::shared_ptr<boost::asio::ip::tcp::socket> socket, con
 
     if (ec)
     {
-        std::cout << "[server] ERROR: " << ec.what() << std::endl;
+        std::cout << "[server] ERROR: " << ec.message() << std::endl;
         return;
     }
 

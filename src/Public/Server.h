@@ -5,7 +5,7 @@
 #include "unordered_set"
 #include "memory"
 
-#include "Session.h"
+class Session;
 
 namespace asio = boost::asio;
 using tcp = asio::ip::tcp;

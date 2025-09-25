@@ -2,11 +2,11 @@
 
 #include "boost/asio.hpp"
 
-#include "deque"
-#include "string"
-#include "memory"
+#include <deque>
+#include <string>
+#include <memory>
 
-#include "Server.h"
+class Server;
 
 namespace asio = boost::asio;
 using tcp = asio::ip::tcp;
@@ -21,9 +21,9 @@ public:
 
 private:
     void do_read_line();
-    void on_read(const boost::system::error_code& ec, std::size_t size);
+    void on_read(const boost::system::error_code& ec);
     void do_write();
-    void on_write(const boost::system::error_code& ec, std::size_t size);
+    void on_write(const boost::system::error_code& ec);
     void close();
 
 private:
