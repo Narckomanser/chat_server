@@ -22,7 +22,7 @@ public:
     void start_accept();
     void remove_session(const std::shared_ptr<Session>& session);
 
-    bool set_nick(std::shared_ptr<Session>& session, const std::string& new_nick, std::string reason);
+    bool set_nick(std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason);
     void drop_nick(const std::shared_ptr<Session>& session);
     std::shared_ptr<Session> find_session_by_nick(const std::string& nick);
 

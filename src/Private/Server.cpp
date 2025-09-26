@@ -30,9 +30,9 @@ static bool valid_name(const std::string& nick)
     return std::regex_match(nick, nick_validator);
 }
 
-bool Server::set_nick(std::shared_ptr<Session>& session, const std::string& new_nick, std::string reason)
+bool Server::set_nick(std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason)
 {
-    // check is valid
+    // check is valid by regex
     if (!valid_name(new_nick))
     {
         reason = "invalid nick";
@@ -40,9 +40,9 @@ bool Server::set_nick(std::shared_ptr<Session>& session, const std::string& new_
     }
 
     // check is taken
-    if (const auto it_found_nick = nick_registry_.find(new_nick); it_found_nick != nick_registry_.end())
+    if (const auto it_nick = nick_registry_.find(new_nick); it_nick != nick_registry_.end())
     {
-        if (const auto alive = it_found_nick->second.lock())
+        if (const auto alive = it_nick->second.lock())
         {
             if (alive.get() != session.get())
             {
@@ -51,41 +51,69 @@ bool Server::set_nick(std::shared_ptr<Session>& session, const std::string& new_
             }
             else
             {
-                nick_registry_.erase(it_found_nick);
+                nick_registry_.erase(it_nick);
             }
         }
     }
 
     // delete old if exist
-    for (auto it_nick = nick_registry_.begin(); it_nick != nick_registry_.end();)
-    {
-        if (const auto found_session = it_nick->second.lock(); !found_session)
-        {
-            it_nick = nick_registry_.erase(it_nick);
-        }
-        else if (found_session.get() == session.get())
-        {
-            it_nick = nick_registry_.erase(it_nick);
-        }
-        else it_nick++;
-    }
+    drop_nick(session);
 
     nick_registry_[new_nick] = session;
     return true;
 }
 
-void Server::drop_nick(const std::shared_ptr<Session>& session) {}
+void Server::drop_nick(const std::shared_ptr<Session>& session)
+{
+    for (auto it_nick = nick_registry_.begin(); it_nick != nick_registry_.end();)
+    {
+        if (const auto it_session = it_nick->second.lock(); !it_session || it_session.get() == session.get())
+        {
+            it_nick = nick_registry_.erase(it_nick);
+        }
+        else
+            it_nick++;
+    }
+}
 std::shared_ptr<Session> Server::find_session_by_nick(const std::string& nick)
 {
-    return std::shared_ptr<Session>();
+    if (auto it_nick = nick_registry_.find(nick); it_nick != nick_registry_.end())
+    {
+        if (auto it_session = it_nick->second.lock())
+        {
+            return it_session;
+        }
+        // lazy remove if weak_ptr is dead
+        nick_registry_.erase(it_nick);
+    }
+    return {};
 }
 std::shared_ptr<Room> Server::get_or_create_room(const std::string& room_name)
 {
-    return std::shared_ptr<Room>();
+    if (rooms_.empty()) return {};
+
+    if (const auto it_room = rooms_.find(room_name); it_room != rooms_.end())
+    {
+        return it_room->second;
+    }
+
+    const auto new_room = std::make_shared<Room>(room_name);
+    rooms_[room_name] = new_room;
+    return new_room;
 }
+
 std::vector<std::string> Server::get_room_list()
 {
-    return std::vector<std::string>();
+    if (rooms_.empty()) return {};
+
+    std::vector<std::string> room_list;
+    room_list.reserve(rooms_.size());
+    for (const auto& room : rooms_)
+    {
+        room_list.push_back(room.first);
+    }
+
+    return room_list;
 }
 
 void Server::do_accept()
