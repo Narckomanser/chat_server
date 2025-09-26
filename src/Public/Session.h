@@ -7,6 +7,7 @@
 #include <memory>
 
 class Server;
+class Room;
 
 namespace asio = boost::asio;
 using tcp = asio::ip::tcp;
@@ -18,6 +19,9 @@ public:
     void start();
     void deliver(std::string line);
     std::string get_remote_ip() const;
+    const std::string& get_nick() { return nick_; }
+    void set_room(const std::shared_ptr<Room>& room);
+    std::string get_room_name() const;
 
 private:
     void do_read_line();
@@ -25,10 +29,15 @@ private:
     void do_write();
     void on_write(const boost::system::error_code& ec);
     void close();
+    void handle_command(const std::string& line);
+    void send_info(const std::string& text) {deliver("server INFO: " + text + "\n"); }
+    void send_error(const std::string& text){deliver("server ERROR: " + text + "\n"); }
 
 private:
     tcp::socket socket_;
     asio::streambuf read_buf_;
     std::weak_ptr<Server> server_;
     std::deque<std::string> outbox_;
+    std::string nick_;
+    std::weak_ptr<Room> room_;
 };

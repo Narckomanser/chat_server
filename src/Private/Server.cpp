@@ -26,11 +26,11 @@ void Server::remove_session(const std::shared_ptr<Session>& session)
 
 static bool valid_name(const std::string& nick)
 {
-    static const std::regex nick_validator("^a-zA-z0-9_-{2,20}$");
+    static const std::regex nick_validator("^[A-Za-z0-9_-]{2,20}$");
     return std::regex_match(nick, nick_validator);
 }
 
-bool Server::set_nick(std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason)
+bool Server::set_nick(const std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason)
 {
     // check is valid by regex
     if (!valid_name(new_nick))
@@ -90,8 +90,6 @@ std::shared_ptr<Session> Server::find_session_by_nick(const std::string& nick)
 }
 std::shared_ptr<Room> Server::get_or_create_room(const std::string& room_name)
 {
-    if (rooms_.empty()) return {};
-
     if (const auto it_room = rooms_.find(room_name); it_room != rooms_.end())
     {
         return it_room->second;

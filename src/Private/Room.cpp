@@ -1,5 +1,7 @@
 #include "../Public/Room.h"
 
+#include <iostream>
+
 #include "../Public/Session.h"
 
 Room::Room(std::string name) : room_name_(std::move(name)) {}
@@ -16,21 +18,21 @@ std::vector<std::string> Room::get_members() const
     return members;
 }
 
-void Room::join(std::shared_ptr<Session>& session)
+void Room::join(const std::shared_ptr<Session>& session)
 {
     sessions_.insert(session);
-    broadcast(":server INFO " + session->get_nick() + " joined " + room_name_ + "\n");
+    broadcast("server INFO: " + session->get_nick() + " joined " + room_name_ + "\n");
 }
 
-void Room::leave(std::shared_ptr<Session>& session)
+void Room::leave(const std::shared_ptr<Session>& session)
 {
     if (sessions_.erase(session))
     {
-        broadcast(":server INFO " + session->get_nick() + " left " + room_name_ + "\n");
+        broadcast("server INFO: " + session->get_nick() + " left " + room_name_ + "\n");
     }
 }
 
-void Room::broadcast(std::string& line)
+void Room::broadcast(std::string line)
 {
     for (const auto& session : sessions_)
     {

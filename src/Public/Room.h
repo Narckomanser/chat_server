@@ -15,9 +15,9 @@ public:
     std::string get_room_name() const { return room_name_; };
     std::vector<std::string> get_members() const;
 
-    void join(std::shared_ptr<Session>& sesson);
-    void leave(std::shared_ptr<Session>& session);
-    void broadcast(std::string& line);
+    void join(const std::shared_ptr<Session>& session);
+    void leave(const std::shared_ptr<Session>& session);
+    void broadcast(std::string line);
 
 private:
     std::string room_name_;
