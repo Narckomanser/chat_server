@@ -33,13 +33,14 @@ void Session::start()
         }
     }
 
-    send_info("command list is: ");
-    send_info("/nick to change nickname");
-    send_info("/join to join the room or create the new one");
-    send_info("/leave to leave the room");
-    send_info("/rooms to get list of rooms");
-    send_info("/msg to send message. format is <to> <text>");
-    send_info("/quit to end session");
+    send_info("__________________________________________________________");
+    send_info("/nick <new nick>                     to change nickname");
+    send_info("/join <room name>                    to join the room or create the new one");
+    send_info("/leave                               to leave the room");
+    send_info("/rooms                               to get list of rooms");
+    send_info("/msg <interlocutor name> <text>      to send message");
+    send_info("/quit                                to end session");
+    send_info("__________________________________________________________");
 
     send_info("welcome! your nick is " + nick_);
 
