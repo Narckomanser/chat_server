@@ -255,7 +255,7 @@ void Session::handle_command(const std::string& line)
             {
                 for (auto const& [name, size] : room_list)
                 {
-                    send_info("room: " + name + " members= " + std::to_string(size));
+                    send_info(":server INFO room: " + name + " members= " + std::to_string(size));
                 }
             }
         }
