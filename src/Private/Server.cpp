@@ -5,6 +5,7 @@
 
 #include "../Public/Session.h"
 #include "../Public/Room.h"
+#include "../Public/Log.h"
 
 using boost::asio::ip::tcp;
 
@@ -25,6 +26,8 @@ Server::Server(boost::asio::io_context& context, uint16_t port) : acceptor_(cont
 
     acceptor_.listen(boost::asio::socket_base::max_listen_connections, ec);
     if (ec) throw std::runtime_error("acceptor.listen: " + ec.message());
+
+    log_line("INFO", "server", "listening");
 }
 
 void Server::start_accept()
@@ -61,6 +64,7 @@ bool Server::set_nick(const std::shared_ptr<Session>& session, const std::string
             if (alive.get() != session.get())
             {
                 reason = "nick already taken";
+                log_line("WARN", "nick", "taken nick=" + new_nick);
                 return false;
             }
             else
@@ -160,11 +164,14 @@ void Server::on_accept(std::shared_ptr<boost::asio::ip::tcp::socket> socket, con
 
     if (ec)
     {
-        std::cout << "[server] ERROR: " << ec.message() << std::endl;
+        log_line("ERROR", "accept", ec.message());
         return;
     }
 
     auto session = std::make_shared<Session>(std::move(*socket), shared_from_this());
     sessions_.insert(session);
+
+    log_line("INFO", "accept", "new session");
+
     session->start();
 }

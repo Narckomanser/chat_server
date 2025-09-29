@@ -7,9 +7,10 @@ find_package(Boost REQUIRED)
 
 add_executable(chat_server
         src/main.cpp
-        src/Private/Session.cpp  src/Public/Session.h
-        src/Private/Server.cpp   src/Public/Server.h
-        src/Private/Room.cpp src/Public/Room.h
+        src/Private/Session.cpp     src/Public/Session.h
+        src/Private/Server.cpp      src/Public/Server.h
+        src/Private/Room.cpp        src/Public/Room.h
+        src/Public/Log.h
 )
 
 target_include_directories(chat_server PRIVATE ${Boost_INCLUDE_DIRS})

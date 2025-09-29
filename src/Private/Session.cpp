@@ -7,6 +7,7 @@
 
 #include "../Public/Server.h"
 #include "../Public/Room.h"
+#include "../Public/Log.h"
 
 using namespace std::literals;
 
@@ -16,7 +17,7 @@ Session::Session(tcp::socket&& socket, std::shared_ptr<Server> server) : socket_
 
 void Session::start()
 {
-    std::cout << "[session] INFO: get connection from " << get_remote_ip() << std::endl;
+    log_line("INFO", "session", std::string("connected ip=") + get_remote_ip());
 
     static std::atomic_uint64_t counter{1};
     if (auto server = server_.lock())
@@ -98,7 +99,7 @@ void Session::on_read(const boost::system::error_code& ec)
     {
         if (ec != asio::error::operation_aborted)
         {
-            std::cout << "[INFO] session closed ip=" << get_remote_ip() << " reason=" << ec.message() << std::endl;
+            log_line("INFO", "session", std::string("closed ip=") + get_remote_ip() + " ec=" + ec.message());
         }
         close();
         return;
@@ -127,6 +128,7 @@ void Session::on_read(const boost::system::error_code& ec)
         {
             if (!allow_message())
             {
+                log_line("WARN", "rate", std::string("rate-limit nick=") + nick_);
                 do_read_line();
                 return;
             }
@@ -153,7 +155,7 @@ void Session::on_write(const boost::system::error_code& ec)
     {
         if (ec != asio::error::operation_aborted)
         {
-            std::cout << "[ERROR] write failed ip=" << get_remote_ip() << " ec=" << ec.message() << std::endl;
+            log_line("ERROR", "session", std::string("write failed ip=") + get_remote_ip() + " ec=" + ec.message());
         }
         close();
         return;
