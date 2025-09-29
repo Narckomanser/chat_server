@@ -8,6 +8,8 @@
 #include "../Public/Server.h"
 #include "../Public/Room.h"
 
+using namespace std::literals;
+
 constexpr std::size_t kMaxLine = 1024;
 
 Session::Session(tcp::socket&& socket, std::shared_ptr<Server> server) : socket_(std::move(socket)), server_(std::move(server)) {}
@@ -123,6 +125,11 @@ void Session::on_read(const boost::system::error_code& ec)
     {
         if (auto room = room_.lock())
         {
+            if (!allow_message())
+            {
+                do_read_line();
+                return;
+            }
             std::string message = room->get_room_name() + "/" + nick_ + ": " + line + "\n";
             room->broadcast(message);
         }
@@ -171,9 +178,9 @@ void Session::close()
     socket_.shutdown(tcp::socket::shutdown_both, ignore);
     socket_.close(ignore);
 
-    if (auto srv = server_.lock())
+    if (auto server = server_.lock())
     {
-        srv->remove_session(shared_from_this());
+        server->remove_session(shared_from_this());
     }
 }
 
@@ -245,18 +252,15 @@ void Session::handle_command(const std::string& line)
     {
         if (const auto server = server_.lock())
         {
-            const auto room_list = server->get_room_list();
+            const auto room_list = server->get_list_rooms_detailed();
             if (room_list.empty())
                 send_info("rooms <none>");
             else
             {
-                std::string list;
-                for (size_t i = 0; i < room_list.size(); i++)
+                for (auto const& [name, size] : room_list)
                 {
-                    if (i) list += ",";
-                    list += room_list[i];
+                    send_info("room: " + name + " members= " + std::to_string(size));
                 }
-                send_info("rooms " + list);
             }
         }
     }
@@ -273,6 +277,9 @@ void Session::handle_command(const std::string& line)
             send_error("usage: /msg <nick> <text>");
             return;
         }
+
+        if (!allow_message()) return;
+
         if (text[0] == ' ') text.erase(0, 1);
 
         if (const auto server = server_.lock())
@@ -292,4 +299,24 @@ void Session::handle_command(const std::string& line)
     }
     else
         send_error("unknown command");
+}
+
+bool Session::allow_message()
+{
+    const auto now = std::chrono::steady_clock::now();
+    const auto cutoff = now - 1s;
+
+    while (!msg_times_.empty() && msg_times_.front() < cutoff)
+    {
+        msg_times_.pop_front();
+    }
+
+    if (msg_times_.size() >= 10)
+    {
+        send_error("rate limit");
+        return false;
+    }
+
+    msg_times_.push_back(now);
+    return true;
 }

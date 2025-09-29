@@ -5,6 +5,7 @@
 #include <deque>
 #include <string>
 #include <memory>
+#include <chrono>
 
 class Server;
 class Room;
@@ -30,8 +31,9 @@ private:
     void on_write(const boost::system::error_code& ec);
     void close();
     void handle_command(const std::string& line);
-    void send_info(const std::string& text) {deliver("server INFO: " + text + "\n"); }
-    void send_error(const std::string& text){deliver("server ERROR: " + text + "\n"); }
+    void send_info(const std::string& text) {deliver(":server INFO " + text + "\n"); }
+    void send_error(const std::string& text){deliver(":server ERROR " + text + "\n"); }
+    bool allow_message();
 
 private:
     tcp::socket socket_;
@@ -40,4 +42,5 @@ private:
     std::deque<std::string> outbox_;
     std::string nick_;
     std::weak_ptr<Room> room_;
+    std::deque<std::chrono::steady_clock::time_point> msg_times_;
 };

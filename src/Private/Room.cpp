@@ -3,8 +3,9 @@
 #include <iostream>
 
 #include "../Public/Session.h"
+#include "../Public/Server.h"
 
-Room::Room(std::string name) : room_name_(std::move(name)) {}
+Room::Room(std::string name, const std::shared_ptr<Server>& server) : room_name_(std::move(name)), server_(server) {}
 
 std::vector<std::string> Room::get_members() const
 {
@@ -29,6 +30,8 @@ void Room::leave(const std::shared_ptr<Session>& session)
     if (sessions_.erase(session))
     {
         broadcast("server INFO: " + session->get_nick() + " left " + room_name_ + "\n");
+
+        server_.lock()->prune_empty_room(room_name_);
     }
 }
 
