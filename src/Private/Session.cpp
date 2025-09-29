@@ -52,12 +52,6 @@ void Session::start()
 
 void Session::deliver(std::string line)
 {
-    if (line.size() > kMaxLine)
-    {
-        line.resize(kMaxLine);
-        line.push_back('\n');
-    }
-
     outbox_.push_back(std::move(line));
 
     if (outbox_.size() == 1)
