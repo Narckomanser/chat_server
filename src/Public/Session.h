@@ -9,6 +9,7 @@
 
 #include "../Public/Message.h"
 #include "../Public/WriteQueue.h"
+#include "../Public/RateLimiter.h"
 
 class Server;
 class Room;
@@ -34,7 +35,6 @@ private:
     void handle_command(const std::string& line);
     void send_info(const std::string& text) { deliver(format_info(text)); }
     void send_error(const std::string& text) {deliver(format_error(text)); }
-    bool allow_message();
 
 private:
     tcp::socket socket_;
@@ -44,4 +44,6 @@ private:
     std::string nick_;
     std::weak_ptr<Room> room_;
     std::deque<std::chrono::steady_clock::time_point> msg_times_;
+    RateLimiter rate_;
+
 };

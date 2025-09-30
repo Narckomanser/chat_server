@@ -125,7 +125,7 @@ void Session::on_read(const boost::system::error_code& ec)
     {
         if (auto room = room_.lock())
         {
-            if (!allow_message())
+            if (!rate_.allow())
             {
                 log_line("WARN", "rate", std::string("rate-limit nick=") + nick_);
                 do_read_line();
@@ -252,7 +252,7 @@ void Session::handle_command(const std::string& line)
             return;
         }
 
-        if (!allow_message()) return;
+        if (!rate_.allow()) return;
 
         if (text[0] == ' ') text.erase(0, 1);
 
@@ -274,24 +274,4 @@ void Session::handle_command(const std::string& line)
     }
     else
         send_error("unknown command");
-}
-
-bool Session::allow_message()
-{
-    const auto now = std::chrono::steady_clock::now();
-    const auto cutoff = now - 1s;
-
-    while (!msg_times_.empty() && msg_times_.front() < cutoff)
-    {
-        msg_times_.pop_front();
-    }
-
-    if (msg_times_.size() >= 10)
-    {
-        send_error("rate limit");
-        return false;
-    }
-
-    msg_times_.push_back(now);
-    return true;
 }
