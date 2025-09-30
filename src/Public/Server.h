@@ -8,6 +8,8 @@
 #include <string>
 #include <memory>
 
+#include "../Public/NickRegistry.h"
+
 class Session;
 class Room;
 
@@ -39,6 +41,6 @@ private:
 private:
     tcp::acceptor acceptor_;
     std::unordered_set<std::shared_ptr<Session>> sessions_;
-    std::unordered_map<std::string, std::weak_ptr<Session>> nick_registry_;
+    NickRegistry nick_registry_;
     std::unordered_map<std::string, std::shared_ptr<Room>> rooms_;
 };

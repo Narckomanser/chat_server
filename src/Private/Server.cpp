@@ -49,52 +49,39 @@ static bool valid_name(const std::string& nick)
 
 bool Server::set_nick(const std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason)
 {
-    // check is valid by regex
-    if (!valid_name(new_nick))
+    auto parsed = Nick::parse(new_nick);
+    if (!parsed)
     {
         reason = "invalid nick";
         return false;
     }
 
-    // check is taken
-    if (const auto it_nick = nick_registry_.find(new_nick); it_nick != nick_registry_.end())
+    if (!session->get_nick().empty())
     {
-        if (const auto alive = it_nick->second.lock())
+        if (auto old_nick = Nick::parse(session->get_nick()))
         {
-            if (alive.get() != session.get())
-            {
-                reason = "nick already taken";
-                log_line("WARN", "nick", "taken nick=" + new_nick);
-                return false;
-            }
+            nick_registry_.drop(*old_nick);
         }
     }
 
-    // delete old if exist
-    drop_nick(session->get_nick());
+    if (!nick_registry_.set(session, *parsed, reason)) return false;
 
-    nick_registry_[new_nick] = session;
     return true;
 }
 
 void Server::drop_nick(const std::string& nick)
 {
-        nick_registry_.erase(nick);
+    if (auto parsed = Nick::parse(nick)) nick_registry_.drop(*parsed);
 }
 
 std::shared_ptr<Session> Server::find_session_by_nick(const std::string& nick)
 {
-    if (auto it_nick = nick_registry_.find(nick); it_nick != nick_registry_.end())
-    {
-        if (auto it_session = it_nick->second.lock())
-        {
-            return it_session;
-        }
-        // lazy remove if weak_ptr is dead
-        nick_registry_.erase(it_nick);
-    }
-    return {};
+    Nick nickname;
+    nickname.name_ = Nick::canonicalize(nick);
+
+    return nick_registry_.find(nickname.name_);
 }
+
 std::shared_ptr<Room> Server::get_or_create_room(const std::string& room_name)
 {
     if (const auto it_room = rooms_.find(room_name); it_room != rooms_.end())
@@ -120,6 +107,7 @@ std::vector<std::string> Server::get_room_list()
 
     return room_list;
 }
+
 std::vector<std::pair<std::string, std::size_t>> Server::get_list_rooms_detailed() const
 {
     std::vector<std::pair<std::string, std::size_t>> rooms;
