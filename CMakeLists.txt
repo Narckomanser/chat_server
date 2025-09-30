@@ -11,6 +11,7 @@ add_executable(chat_server
         src/Private/Server.cpp      src/Public/Server.h
         src/Private/Room.cpp        src/Public/Room.h
         src/Public/Log.h
+        src/Public/Types.h
 )
 
 target_include_directories(chat_server PRIVATE ${Boost_INCLUDE_DIRS})
