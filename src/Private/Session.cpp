@@ -4,6 +4,7 @@
 #include <sstream>
 #include <regex>
 #include <atomic>
+#include <utility>
 
 #include "../Public/Server.h"
 #include "../Public/Room.h"
@@ -13,7 +14,16 @@ using namespace std::literals;
 
 constexpr std::size_t kMaxLine = 1024;
 
-Session::Session(tcp::socket&& socket, std::shared_ptr<Server> server) : socket_(std::move(socket)), server_(std::move(server)) {}
+Session::Session(tcp::socket&& socket, const std::shared_ptr<Server>& server)
+    : socket_(std::move(socket)), server_(server), writer_(socket_)
+{
+    auto self = shared_from_this();
+    writer_.on_error_ = [self, this](const boost::system::error_code& ec)
+    {
+        log_line("ERROR", "write", "failed ip= " + get_remote_ip() + " ec= " + ec.message());
+        close();
+    };
+}
 
 void Session::start()
 {
@@ -52,12 +62,7 @@ void Session::start()
 
 void Session::deliver(std::string line)
 {
-    outbox_.push_back(std::move(line));
-
-    if (outbox_.size() == 1)
-    {
-        do_write();
-    }
+    writer_.enqueue(std::move(line));
 }
 
 std::string Session::get_remote_ip() const
@@ -133,32 +138,6 @@ void Session::on_read(const boost::system::error_code& ec)
     }
 
     do_read_line();
-}
-
-void Session::do_write()
-{
-    auto self = shared_from_this();
-    asio::async_write(socket_, asio::buffer(outbox_.front().data(), outbox_.front().size()),
-        [self](const boost::system::error_code& ec, std::size_t) { self->on_write(ec); });
-}
-
-void Session::on_write(const boost::system::error_code& ec)
-{
-    if (ec)
-    {
-        if (ec != asio::error::operation_aborted)
-        {
-            log_line("ERROR", "session", std::string("write failed ip=") + get_remote_ip() + " ec=" + ec.message());
-        }
-        close();
-        return;
-    }
-
-    if (!outbox_.empty())
-    {
-        outbox_.pop_front();
-        do_write();
-    }
 }
 
 void Session::close()

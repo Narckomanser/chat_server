@@ -1,11 +1,8 @@
 #include "../Public/Room.h"
 
-#include <iostream>
-
 #include "../Public/Session.h"
 #include "../Public/Server.h"
 #include "../Public/Log.h"
-#include "../Public/Message.h"
 
 Room::Room(std::string name, const std::shared_ptr<Server>& server) : room_name_(std::move(name)), server_(server) {}
 

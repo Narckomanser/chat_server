@@ -15,6 +15,8 @@ add_executable(chat_server
         src/Private/Command.cpp     src/Public/Command.h
 
                                     src/Public/Message.h
+        src/Public/WriteQueue.h     src/Private/WriteQueue.cpp
+        src/Public/RateLimiter.h
 )
 
 target_include_directories(chat_server PRIVATE ${Boost_INCLUDE_DIRS})
