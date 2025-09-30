@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <memory>
 
-#include "Types.h"
+#include "../core/Types.h"
 #include "NickHash.h"
 
 class Session;

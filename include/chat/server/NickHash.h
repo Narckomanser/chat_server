@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "../Public/Types.h"
+#include "../core/Types.h"
 
 struct NickHash
 {

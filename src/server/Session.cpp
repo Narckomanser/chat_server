@@ -1,4 +1,4 @@
-#include "../Public/Session.h"
+#include "../../include/chat/server/Session.h"
 
 #include <iostream>
 #include <sstream>
@@ -6,9 +6,9 @@
 #include <atomic>
 #include <utility>
 
-#include "../Public/Server.h"
-#include "../Public/Room.h"
-#include "../Public/Log.h"
+#include "../../include/chat/server/Server.h"
+#include "../../include/chat/server/Room.h"
+#include "../../include/chat/core/Log.h"
 
 using namespace std::literals;
 

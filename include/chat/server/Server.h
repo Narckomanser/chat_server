@@ -8,7 +8,7 @@
 #include <string>
 #include <memory>
 
-#include "../Public/NickRegistry.h"
+#include "NickRegistry.h"
 
 class Session;
 class Room;

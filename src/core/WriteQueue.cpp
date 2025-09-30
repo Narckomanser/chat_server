@@ -1,4 +1,4 @@
-#include "../Public/WriteQueue.h"
+#include "../../include/chat/core/WriteQueue.h"
 
 void WriteQueue::enqueue(std::string s)
 {

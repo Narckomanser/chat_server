@@ -1,4 +1,4 @@
-#include "../Public/NickRegistry.h"
+#include "../../include/chat/server/NickRegistry.h"
 
 bool NickRegistry::set(const std::shared_ptr<Session>& who, const Nick& nick, std::string& reason)
 {

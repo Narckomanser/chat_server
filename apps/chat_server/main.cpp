@@ -1,8 +1,8 @@
-#include "Public/Server.h"
+#include "../../include/chat/server/Server.h"
 #include <boost/asio.hpp>
 #include <iostream>
 
-#include "Public/Log.h"
+#include "../../include/chat/core/Log.h"
 
 namespace asio = boost::asio;
 
