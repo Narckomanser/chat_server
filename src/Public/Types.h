@@ -25,7 +25,7 @@ struct Nick
     static std::optional<Nick> parse(std::string new_nick)
     {
         if (!valid(new_nick)) return std::nullopt;
-        return Nick{std::move(new_nick)};
+        return Nick{canonicalize(std::move(new_nick))};
     }
 
     [[nodiscard]] std::string const& str() const { return name_; }

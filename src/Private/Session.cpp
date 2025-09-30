@@ -17,16 +17,17 @@ constexpr std::size_t kMaxLine = 1024;
 Session::Session(tcp::socket&& socket, const std::shared_ptr<Server>& server)
     : socket_(std::move(socket)), server_(server), writer_(socket_)
 {
+}
+
+void Session::start()
+{
     auto self = shared_from_this();
     writer_.on_error_ = [self, this](const boost::system::error_code& ec)
     {
         log_line("ERROR", "write", "failed ip= " + get_remote_ip() + " ec= " + ec.message());
         close();
     };
-}
 
-void Session::start()
-{
     log_line("INFO", "session", std::string("connected ip=") + get_remote_ip());
 
     static std::atomic_uint64_t counter{1};
@@ -35,7 +36,8 @@ void Session::start()
         for (;;)
         {
             // TODO should be replaced someday
-            std::string candidate = "anon" + std::to_string(counter++ % 100000);
+            Nick candidate;
+            candidate.name_ = "anon" + std::to_string(counter++ % 100000);
             std::string reason;
             if (server->set_nick(shared_from_this(), candidate, reason))
             {
@@ -55,7 +57,7 @@ void Session::start()
     send_info("/quit                                to end session");
     send_info("__________________________________________________________");
 
-    send_info("welcome! your nick is " + nick_);
+    send_info("welcome! your nick is " + nick_.name_);
 
     do_read_line();
 }
@@ -127,11 +129,12 @@ void Session::on_read(const boost::system::error_code& ec)
         {
             if (!rate_.allow())
             {
-                log_line("WARN", "rate", std::string("rate-limit nick=") + nick_);
+                log_line("WARN", "rate", std::string("rate-limit nick=") + nick_.name_);
+                send_error("rate limit");
                 do_read_line();
                 return;
             }
-            room->broadcast(format_public(get_room_name(), nick_, line));
+            room->broadcast(format_public(get_room_name(), nick_.name_, line));
         }
         else
             send_error("not in room; use /join <room>");
@@ -158,12 +161,6 @@ void Session::close()
     }
 }
 
-static bool valid_name(const std::string& nick)
-{
-    static const std::regex nick_validator("^[A-Za-z0-9_-]{2,20}$");
-    return std::regex_match(nick, nick_validator);
-}
-
 void Session::handle_command(const std::string& line)
 {
     // skip the "/" symbol
@@ -175,18 +172,21 @@ void Session::handle_command(const std::string& line)
     {
         std::string new_nick;
         iss >> new_nick;
-        if (new_nick.empty() || !valid_name(new_nick))
+
+        auto parsed = Nick::parse(new_nick);
+        if (!parsed)
         {
             send_error("usage: /nick <name>");
             return;
         }
+
         if (const auto server = server_.lock())
         {
             std::string reason;
-            if (server->set_nick(shared_from_this(), new_nick, reason))
+            if (server->set_nick(shared_from_this(), *parsed, reason))
             {
-                nick_ = new_nick;
-                send_info("nick set to " + nick_);
+                nick_ = parsed.value();
+                send_info("nick set to " + nick_.name_);
             }
             else
                 send_error(reason);
@@ -196,7 +196,7 @@ void Session::handle_command(const std::string& line)
     {
         std::string room_to_join;
         iss >> room_to_join;
-        if (room_to_join.empty() || !valid_name(room_to_join))
+        if (room_to_join.empty() || !RoomName::parse(room_to_join))
         {
             send_error("usage: /join <room>");
             return;
@@ -252,17 +252,27 @@ void Session::handle_command(const std::string& line)
             return;
         }
 
-        if (!rate_.allow()) return;
+        if (!rate_.allow())
+        {
+            send_error("rate limit");
+            return;
+        }
 
         if (text[0] == ' ') text.erase(0, 1);
 
+        auto parsed = Nick::parse(to);
+        if (!parsed)
+        {
+            send_error("invalid nick");
+            return;
+        }
+
         if (const auto server = server_.lock())
         {
-            if (const auto dst = server->find_session_by_nick(to))
+            if (const auto dst = server->find_session_by_nick(*parsed))
             {
-
-                dst->deliver(format_pm(nick_, text));
-                deliver(format_pm_echo(to, text));
+                dst->deliver(format_pm(nick_.name_, text));
+                deliver(format_pm_echo(parsed->str(), text));
             }
             else
                 send_error("nick not found");

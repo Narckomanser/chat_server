@@ -24,9 +24,9 @@ public:
     void start_accept();
     void remove_session(const std::shared_ptr<Session>& session);
 
-    bool set_nick(const std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason);
-    void drop_nick(const std::string& nick);
-    std::shared_ptr<Session> find_session_by_nick(const std::string& nick);
+    bool set_nick(const std::shared_ptr<Session>& session, const Nick& new_nick, std::string& reason);
+    void drop_nick(const Nick& nick);
+    std::shared_ptr<Session> find_session_by_nick(const Nick& nick);
 
     std::shared_ptr<Room> get_or_create_room(const std::string& room_name);
     std::vector<std::string> get_room_list();

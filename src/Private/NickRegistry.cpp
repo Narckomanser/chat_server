@@ -24,7 +24,12 @@ std::shared_ptr<Session> NickRegistry::find(const std::string_view& nick_sv)
     Nick canonical_nick;
     canonical_nick.name_ = Nick::canonicalize(std::string(nick_sv));
 
-    if (auto it_nick = registry_.find(canonical_nick); it_nick != registry_.end())
+    return find(canonical_nick);
+}
+
+std::shared_ptr<Session> NickRegistry::find(const Nick& nick)
+{
+    if (auto it_nick = registry_.find(nick); it_nick != registry_.end())
     {
         if (auto sp = it_nick->second.lock()) return sp;
         registry_.erase(it_nick);

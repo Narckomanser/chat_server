@@ -21,7 +21,7 @@ std::vector<std::string> Room::get_members() const
 void Room::join(const std::shared_ptr<Session>& session)
 {
     sessions_.insert(session);
-    broadcast(format_info(session->get_nick() + " joined " + room_name_ + "\n"));
+    broadcast(format_info(session->get_nick() + " joined " + room_name_));
     log_line("INFO", "room", session->get_nick() + " joined room=" + room_name_);
 }
 
@@ -29,14 +29,14 @@ void Room::leave(const std::shared_ptr<Session>& session)
 {
     if (sessions_.erase(session))
     {
-        broadcast(format_info(session->get_nick() + " left " + room_name_ + "\n"));
+        broadcast(format_info(session->get_nick() + " left " + room_name_));
         log_line("INFO", "room", session->get_nick() + " left room=" + room_name_);
 
         server_.lock()->prune_empty_room(room_name_);
     }
 }
 
-void Room::broadcast(std::string line)
+void Room::broadcast(const std::string& line)
 {
     for (const auto& session : sessions_)
     {

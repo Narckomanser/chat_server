@@ -10,6 +10,7 @@
 #include "../Public/Message.h"
 #include "../Public/WriteQueue.h"
 #include "../Public/RateLimiter.h"
+#include "../Public/Types.h"
 
 class Server;
 class Room;
@@ -24,7 +25,7 @@ public:
     void start();
     void deliver(std::string line);
     std::string get_remote_ip() const;
-    const std::string& get_nick() { return nick_; }
+    const Nick& get_nick() const { return nick_; }
     void set_room(const std::shared_ptr<Room>& room);
     std::string get_room_name() const;
 
@@ -41,9 +42,8 @@ private:
     asio::streambuf read_buf_;
     std::weak_ptr<Server> server_;
     WriteQueue writer_;
-    std::string nick_;
+    Nick nick_;
     std::weak_ptr<Room> room_;
-    std::deque<std::chrono::steady_clock::time_point> msg_times_;
     RateLimiter rate_;
 
 };

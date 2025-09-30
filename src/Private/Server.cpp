@@ -41,45 +41,19 @@ void Server::remove_session(const std::shared_ptr<Session>& session)
     drop_nick(session->get_nick());
 }
 
-static bool valid_name(const std::string& nick)
+bool Server::set_nick(const std::shared_ptr<Session>& session, const Nick& new_nick, std::string& reason)
 {
-    static const std::regex nick_validator("^[A-Za-z0-9_-]{2,20}$");
-    return std::regex_match(nick, nick_validator);
+    return nick_registry_.set(session, new_nick, reason);
 }
 
-bool Server::set_nick(const std::shared_ptr<Session>& session, const std::string& new_nick, std::string& reason)
+void Server::drop_nick(const Nick& nick)
 {
-    auto parsed = Nick::parse(new_nick);
-    if (!parsed)
-    {
-        reason = "invalid nick";
-        return false;
-    }
-
-    if (!session->get_nick().empty())
-    {
-        if (auto old_nick = Nick::parse(session->get_nick()))
-        {
-            nick_registry_.drop(*old_nick);
-        }
-    }
-
-    if (!nick_registry_.set(session, *parsed, reason)) return false;
-
-    return true;
+    nick_registry_.drop(nick);
 }
 
-void Server::drop_nick(const std::string& nick)
+std::shared_ptr<Session> Server::find_session_by_nick(const Nick& nick)
 {
-    if (auto parsed = Nick::parse(nick)) nick_registry_.drop(*parsed);
-}
-
-std::shared_ptr<Session> Server::find_session_by_nick(const std::string& nick)
-{
-    Nick nickname;
-    nickname.name_ = Nick::canonicalize(nick);
-
-    return nick_registry_.find(nickname.name_);
+    return nick_registry_.find(nick.str());
 }
 
 std::shared_ptr<Room> Server::get_or_create_room(const std::string& room_name)

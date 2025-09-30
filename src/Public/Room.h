@@ -18,7 +18,7 @@ public:
 
     void join(const std::shared_ptr<Session>& session);
     void leave(const std::shared_ptr<Session>& session);
-    void broadcast(std::string line);
+    void broadcast(const std::string& line);
 
     size_t size() const { return sessions_.size(); }
 

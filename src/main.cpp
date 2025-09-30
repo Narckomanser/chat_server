@@ -2,6 +2,8 @@
 #include <boost/asio.hpp>
 #include <iostream>
 
+#include "Public/Log.h"
+
 namespace asio = boost::asio;
 
 static unsigned short DEFAULT_PORT = 5555;
@@ -16,12 +18,12 @@ int main()
         auto server = std::make_shared<Server>(io, port);
         server->start_accept();
 
-        std::cout << "[INFO] server listening port=" << port << std::endl;
+        log_line("INFO", "server", "listening port= " + std::to_string(port));
         io.run();
     }
     catch (const std::exception& e)
     {
-        std::cerr << "[ERROR] fatal: " << e.what() << std::endl;
+        log_line("ERROR", "fatal", e.what());
         return 1;
     }
     return 0;
