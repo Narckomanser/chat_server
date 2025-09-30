@@ -126,8 +126,7 @@ void Session::on_read(const boost::system::error_code& ec)
                 do_read_line();
                 return;
             }
-            std::string message = room->get_room_name() + "/" + nick_ + ": " + line + "\n";
-            room->broadcast(message);
+            room->broadcast(format_public(get_room_name(), nick_, line));
         }
         else
             send_error("not in room; use /join <room>");
@@ -255,7 +254,7 @@ void Session::handle_command(const std::string& line)
             {
                 for (auto const& [name, size] : room_list)
                 {
-                    send_info(":server INFO room: " + name + " members= " + std::to_string(size));
+                    send_info("room: " + name + " members= " + std::to_string(size));
                 }
             }
         }
@@ -282,8 +281,9 @@ void Session::handle_command(const std::string& line)
         {
             if (const auto dst = server->find_session_by_nick(to))
             {
-                dst->deliver("[PM]" + nick_ + ": " + text + "\n");
-                deliver("[PM]to " + to + ": " + text + "\n");
+
+                dst->deliver(format_pm(nick_, text));
+                deliver(format_pm_echo(to, text));
             }
             else
                 send_error("nick not found");
