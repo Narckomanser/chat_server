@@ -67,10 +67,6 @@ bool Server::set_nick(const std::shared_ptr<Session>& session, const std::string
                 log_line("WARN", "nick", "taken nick=" + new_nick);
                 return false;
             }
-            else
-            {
-                drop_nick(alive->get_nick());
-            }
         }
     }
 
