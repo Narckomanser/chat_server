@@ -1,34 +1,23 @@
-FROM ubuntu:24.04 AS build
+FROM debian:bookworm AS build
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake git libboost-all-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update  \
-    && apt-get install -y \
-      build-essential  \
-      cmake  \
-      pkg-config \
-      libboost-all-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
+WORKDIR /src
 COPY . .
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j && \
+    strip build/apps/chat_server/chat_server || true
 
-RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
- && cmake --build build --parallel
-
-FROM ubuntu:24.04 AS runtime
-RUN apt-get update &&  \
-    apt-get install -y \
-    libstdc++6 \
-    && rm -rf /var/lib/apt/lists/*
-
+FROM debian:bookworm-slim
+RUN useradd -m runner
+USER runner
 WORKDIR /app
 
-COPY --from=build /app/build/chat_server /app/chat_server
-
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY --from=build /src/build/apps/chat_server/chat_server /usr/local/bin/chat_server
 
 EXPOSE 5555
-CMD ["/app/chat_server", "--port", "5555"]
 
-
+ENV PORT=5555
+ENTRYPOINT ["/usr/local/bin/chat_server"]
+CMD []

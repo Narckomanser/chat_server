@@ -1,4 +1,4 @@
-#include "../../include/chat/core/RateLimiter.h"
+#include <chat/core/RateLimiter.h>
 
 bool RateLimiter::allow()
 {

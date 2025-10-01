@@ -1,4 +1,4 @@
-#include "../../include/chat/core/Command.h"
+#include <chat/core/Command.h>
 
 #include <sstream>
 

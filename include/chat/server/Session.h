@@ -7,10 +7,10 @@
 #include <memory>
 #include <chrono>
 
-#include "../core/Message.h"
-#include "../core/WriteQueue.h"
-#include "../core/RateLimiter.h"
-#include "../core/Types.h"
+#include <chat/core/Message.h>
+#include <chat/core/WriteQueue.h>
+#include <chat/core/RateLimiter.h>
+#include <chat/core/Types.h>
 
 class Server;
 class Room;

@@ -1,3 +1,2 @@
-docker build -t chat_server:dev -f docker/Dockerfile .
-docker run --rm --name chat_server -p 5555:5555 chat_server:dev
-docker stop chat_server && docker rm chat_server
+docker build -t chat_server .
+docker run --rm -p 5555:5555 <image_id>

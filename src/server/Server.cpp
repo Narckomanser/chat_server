@@ -1,11 +1,11 @@
-#include "../../include/chat/server/Server.h"
+#include <chat/server/Server.h>
 
 #include <iostream>
 #include <regex>
 
-#include "../../include/chat/server/Session.h"
-#include "../../include/chat/server/Room.h"
-#include "../../include/chat/core/Log.h"
+#include <chat/server/Session.h>
+#include <chat/server/Room.h>
+#include <chat/core/Log.h>
 
 using boost::asio::ip::tcp;
 

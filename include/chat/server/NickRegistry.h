@@ -3,8 +3,8 @@
 #include <unordered_map>
 #include <memory>
 
-#include "../core/Types.h"
-#include "NickHash.h"
+#include <chat/core/Types.h>
+#include <chat/server/NickHash.h>
 
 class Session;
 

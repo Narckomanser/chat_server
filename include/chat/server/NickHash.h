@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "../core/Types.h"
+#include <chat/core/Types.h>
 
 struct NickHash
 {

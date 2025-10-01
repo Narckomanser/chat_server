@@ -8,13 +8,22 @@ namespace asio = boost::asio;
 
 static unsigned short DEFAULT_PORT = 5555;
 
-int main()
+int main(int argc, char** argv)
 {
     try
     {
         unsigned short port = DEFAULT_PORT;
-        asio::io_context io;
 
+        if (const char* p = std::getenv("PORT")) {
+            port = static_cast<unsigned short>(std::stoi(p));
+        }
+        for (int i = 1; i + 1 < argc; ++i) {
+            if (std::strcmp(argv[i], "--port") == 0) {
+                port = static_cast<unsigned short>(std::stoi(argv[i+1]));
+            }
+        }
+
+        asio::io_context io;
         auto server = std::make_shared<Server>(io, port);
         server->start_accept();
 

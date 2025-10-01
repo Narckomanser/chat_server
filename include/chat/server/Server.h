@@ -8,7 +8,7 @@
 #include <string>
 #include <memory>
 
-#include "NickRegistry.h"
+#include <chat/server/NickRegistry.h>
 
 class Session;
 class Room;
