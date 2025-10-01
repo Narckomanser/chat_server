@@ -2,33 +2,106 @@
 
 #include <sstream>
 
-Command parse_command(std::string_view line)
+#include <chat/core/Message.h>
+#include <chat/core/Types.h>
+#include <chat/server/Server.h>
+#include <chat/server/Session.h>
+#include <chat/server/Room.h>
+
+static std::shared_ptr<Server> need_server(Session& session)
 {
-    Command command;
-    if (line.empty() || line[0] != '/') return command;
+    if (auto server = session.)
+}
+
+
+ParsedCommand parse_command(std::string_view line)
+{
+    ParsedCommand parsed_cmd;
+    if (line.empty() || line[0] != '/') return parsed_cmd;
 
     std::istringstream iss(std::string(line.substr(1)));
     std::string cmd;
     iss >> cmd;
 
     if (cmd == "nick")
-        command.kind = commandKind::Nick;
+        parsed_cmd.kind = commandKind::Nick;
     else if (cmd == "join")
-        command.kind = commandKind::Join;
+        parsed_cmd.kind = commandKind::Join;
     else if (cmd == "leave")
-        command.kind = commandKind::Leave;
+        parsed_cmd.kind = commandKind::Leave;
     else if (cmd == "rooms")
-        command.kind = commandKind::Rooms;
+        parsed_cmd.kind = commandKind::Rooms;
     else if (cmd == "msg")
-        command.kind = commandKind::Msg;
+        parsed_cmd.kind = commandKind::Msg;
     else if (cmd == "quit")
-        command.kind = commandKind::Quit;
+        parsed_cmd.kind = commandKind::Quit;
     else
-        command.kind = commandKind::Unknown;
+        parsed_cmd.kind = commandKind::Unknown;
+
+    if (parsed_cmd.kind == commandKind::Msg)
+    {
+        std::string to;
+        iss >> to;
+        std::string text;
+        std::getline(iss, text);
+
+        if (!text.empty() && text[0] == ' ') text.erase(0, 1);
+        if (!to.empty()) parsed_cmd.args.push_back(std::move(to));
+        if (!text.empty()) parsed_cmd.args.push_back(std::move(text));
+
+        return parsed_cmd;
+    }
 
     std::string token;
     while (iss >> token)
-        command.args.push_back(std::move(token));
+        parsed_cmd.args.push_back(std::move(token));
 
-    return command;
+    return parsed_cmd;
+}
+
+CommandRegistry::CommandRegistry(std::weak_ptr<Server> server)
+{
+
+}
+
+void CommandRegistry::register_cmd(const std::string& name, std::unique_ptr<ICommand> cmd)
+{
+
+}
+
+bool CommandRegistry::dispatch(Session& sessin, const ParsedCommand& command)
+{
+
+}
+
+
+
+void NickCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+
+}
+
+void JoinCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+
+}
+
+void LeaveCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+
+}
+
+void RoomsCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+
+}
+
+void MsgCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+
+}
+
+void QuitCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+
 }
