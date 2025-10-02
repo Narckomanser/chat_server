@@ -7,6 +7,7 @@
 
 #include <chat/server/Server.h>
 #include <chat/server/Room.h>
+#include <chat/core/Command.h>
 #include <chat/core/Log.h>
 
 using namespace std::literals;
@@ -58,12 +59,32 @@ void Session::start()
 
     send_info("welcome! your nick is " + nick_.name_);
 
+    registry_ = build_default_registry(server_);
+
     do_read_line();
 }
 
 void Session::deliver(std::string line)
 {
     writer_.enqueue(std::move(line));
+}
+
+void Session::close()
+{
+    boost::system::error_code ignore;
+
+    if (auto room = room_.lock())
+    {
+        room->leave(shared_from_this());
+    }
+
+    socket_.shutdown(tcp::socket::shutdown_both, ignore);
+    socket_.close(ignore);
+
+    if (auto server = server_.lock())
+    {
+        server->remove_session(shared_from_this());
+    }
 }
 
 std::string Session::get_remote_ip() const
@@ -76,15 +97,20 @@ std::string Session::get_remote_ip() const
     return ep.address().to_string();
 }
 
+std::string Session::get_room_name() const
+{
+    if (const auto room = room_.lock()) return room->get_room_name();
+    return {};
+}
+
 void Session::set_room(const std::shared_ptr<Room>& room)
 {
     room_ = room;
 }
 
-std::string Session::get_room_name() const
+bool Session::allow_sending_now()
 {
-    if (const auto room = room_.lock()) return room->get_room_name();
-    return {};
+    return rate_.allow();
 }
 
 void Session::do_read_line()
@@ -142,145 +168,11 @@ void Session::on_read(const boost::system::error_code& ec)
     do_read_line();
 }
 
-void Session::close()
-{
-    boost::system::error_code ignore;
-
-    if (auto room = room_.lock())
-    {
-        room->leave(shared_from_this());
-    }
-
-    socket_.shutdown(tcp::socket::shutdown_both, ignore);
-    socket_.close(ignore);
-
-    if (auto server = server_.lock())
-    {
-        server->remove_session(shared_from_this());
-    }
-}
-
 void Session::handle_command(const std::string& line)
 {
-    // skip the "/" symbol
-    std::istringstream iss(line.substr(1));
-    std::string cmd;
-    iss >> cmd;
-
-    if (cmd == "nick")
+    auto cmd = parse_command(line);
+    if (cmd.kind == commandKind::Unknown || !registry_ || !registry_->dispatch(*this, cmd))
     {
-        std::string new_nick;
-        iss >> new_nick;
-
-        auto parsed = Nick::parse(new_nick);
-        if (!parsed)
-        {
-            send_error("usage: /nick <name>");
-            return;
-        }
-
-        if (const auto server = server_.lock())
-        {
-            std::string reason;
-            if (server->set_nick(shared_from_this(), *parsed, reason))
-            {
-                nick_ = parsed.value();
-                send_info("nick set to " + nick_.name_);
-            }
-            else
-                send_error(reason);
-        }
-    }
-    else if (cmd == "join")
-    {
-        std::string room_to_join;
-        iss >> room_to_join;
-        if (room_to_join.empty() || !RoomName::parse(room_to_join))
-        {
-            send_error("usage: /join <room>");
-            return;
-        }
-        if (const auto server = server_.lock())
-        {
-            const auto new_room = server->get_or_create_room(room_to_join);
-            if (const auto old_room = room_.lock()) old_room->leave(shared_from_this());
-            set_room(new_room);
-            new_room->join(shared_from_this());
-            send_info("joined " + room_to_join);
-        }
-    }
-    else if (cmd == "leave")
-    {
-        if (const auto room = room_.lock())
-        {
-            const auto room_name = room->get_room_name();
-            room->leave(shared_from_this());
-            room_.reset();
-            send_info("left " + room_name);
-        }
-        else
-            send_error("not in room");
-    }
-    else if (cmd == "rooms")
-    {
-        if (const auto server = server_.lock())
-        {
-            const auto room_list = server->get_list_rooms_detailed();
-            if (room_list.empty())
-                send_info("rooms <none>");
-            else
-            {
-                for (auto const& [name, size] : room_list)
-                {
-                    send_info("room: " + name + " members= " + std::to_string(size));
-                }
-            }
-        }
-    }
-    else if (cmd == "msg")
-    {
-        std::string to;
-        iss >> to;
-
-        std::string text;
-        getline(iss, text);
-
-        if (to.empty() || text.empty())
-        {
-            send_error("usage: /msg <nick> <text>");
-            return;
-        }
-
-        if (!rate_.allow())
-        {
-            send_error("rate limit");
-            return;
-        }
-
-        if (text[0] == ' ') text.erase(0, 1);
-
-        auto parsed = Nick::parse(to);
-        if (!parsed)
-        {
-            send_error("invalid nick");
-            return;
-        }
-
-        if (const auto server = server_.lock())
-        {
-            if (const auto dst = server->find_session_by_nick(*parsed))
-            {
-                dst->deliver(format_pm(nick_.name_, text));
-                deliver(format_pm_echo(parsed->str(), text));
-            }
-            else
-                send_error("nick not found");
-        }
-    }
-    else if (cmd == "quit")
-    {
-        close();
-    }
-    else
         send_error("unknown command");
+    }
 }

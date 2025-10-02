@@ -42,7 +42,7 @@ public:
     explicit CommandRegistry(std::weak_ptr<Server> server);
 
     void register_cmd(const std::string& name, std::unique_ptr<ICommand> cmd);
-    bool dispatch(Session& sessin, const ParsedCommand& command);
+    bool dispatch(Session& session, const ParsedCommand& command);
 
     std::shared_ptr<Server> get_server() { return server_.lock(); }
 

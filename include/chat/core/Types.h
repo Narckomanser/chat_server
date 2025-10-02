@@ -44,7 +44,7 @@ inline bool operator!=(Nick const& a, Nick const& b) noexcept
 
 struct RoomName
 {
-    std::string room_name;
+    std::string room_name_;
 
     static std::optional<std::string> validate(std::string_view sv)
     {
