@@ -53,7 +53,7 @@ void Server::drop_nick(const Nick& nick)
 
 std::shared_ptr<Session> Server::find_session_by_nick(const Nick& nick)
 {
-    return nick_registry_.find(nick.str());
+    return nick_registry_.find(nick);
 }
 
 std::shared_ptr<Room> Server::get_or_create_room(const std::string& room_name)

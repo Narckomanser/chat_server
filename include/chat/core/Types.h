@@ -13,7 +13,7 @@ struct Nick
     {
         static const std::regex re("^[A-Za-z0-9_-]{2,20}$");
 
-        return std::regex_match(sv.begin(), sv.end(), re);
+        return std::regex_match(std::string(sv), re);
     }
 
     static std::string canonicalize(std::string new_nick)
@@ -46,17 +46,17 @@ struct RoomName
 {
     std::string room_name_;
 
-    static std::optional<std::string> validate(std::string_view sv)
+    static std::optional<std::string> valid(std::string_view sv)
     {
         static const std::regex re("^[A-Za-z0-9_-]{2,20}$");
-        if (!std::regex_match(sv.begin(), sv.end(), re)) return std::string("invalid room name");
+        if (!std::regex_match(std::string(sv), re)) return std::string("invalid room name");
 
         return std::nullopt;
     }
 
     static std::optional<RoomName> parse(std::string s)
     {
-        if (auto error = validate(s)) return std::nullopt;
+        if (!valid(s)) return std::nullopt;
         return RoomName{std::move(s)};
     }
 };

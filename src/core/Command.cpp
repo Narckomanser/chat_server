@@ -98,14 +98,14 @@ void NickCommand::execute(Session& session, const std::vector<std::string>& args
 {
     if (args.empty())
     {
-        session.deliver("usage: /nick <name>");
+        session.deliver(format_error("usage: /nick <name>"));
         return;
     }
 
     auto parsed = Nick::parse(args[0]);
     if (!parsed)
     {
-        session.deliver("invalid nick");
+        session.deliver(format_error("invalid nick"));
         return;
     }
 
@@ -126,14 +126,14 @@ void JoinCommand::execute(Session& session, const std::vector<std::string>& args
 {
     if (args.empty())
     {
-        session.deliver("usage: /nick <name>");
+        session.deliver(format_error("usage: /nick <name>"));
         return;
     }
 
     auto parsed = RoomName::parse(args[0]);
     if (!parsed)
     {
-        session.deliver("invalid room");
+        session.deliver(format_error("invalid room"));
         return;
     }
 
@@ -208,7 +208,7 @@ void MsgCommand::execute(Session& session, const std::vector<std::string>& args)
     if (auto dst = server->find_session_by_nick(*to_parsed))
     {
         dst->deliver(format_pm(session.get_nick().name_, args[1]));
-        session.deliver(format_pm(dst->get_nick().name_, args[1]));
+        session.deliver(format_pm_echo(dst->get_nick().name_, args[1]));
     }
     else
         session.deliver(format_error("nick not found"));
