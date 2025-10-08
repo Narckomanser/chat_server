@@ -11,12 +11,9 @@ class Session;
 
 enum class commandKind
 {
-    Nick,
-    Join,
-    Leave,
-    Rooms,
-    Msg,
-    Quit,
+    Nick,Join,Leave,Rooms,Msg,Quit,
+    RegisterReq, RegisterResp,
+    AuthReq, AuthResp,
     Unknown
 };
 
@@ -80,6 +77,26 @@ struct MsgCommand : ICommand
 };
 
 struct QuitCommand : ICommand
+{
+    void execute(Session& session, const std::vector<std::string>& args) override;
+};
+
+struct RegisterRequestCommand : ICommand
+{
+    void execute(Session& session, const std::vector<std::string>& args) override;
+};
+
+struct RegisterResponseCommand : ICommand
+{
+    void execute(Session& session, const std::vector<std::string>& args) override;
+};
+
+struct AuthRequestCommand : ICommand
+{
+    void execute(Session& session, const std::vector<std::string>& args) override;
+};
+
+struct AuthRespCommand : ICommand
 {
     void execute(Session& session, const std::vector<std::string>& args) override;
 };

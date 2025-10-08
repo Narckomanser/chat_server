@@ -1,8 +1,8 @@
 #include <chat/server/Server.h>
 
-#include <iostream>
-#include <regex>
+#include <sqlite3.h>
 
+#include <chat/core/Crypto.h>
 #include <chat/server/Session.h>
 #include <chat/server/Room.h>
 #include <chat/core/Log.h>
@@ -27,7 +27,23 @@ Server::Server(boost::asio::io_context& context, uint16_t port) : acceptor_(cont
     acceptor_.listen(boost::asio::socket_base::max_listen_connections, ec);
     if (ec) throw std::runtime_error("acceptor.listen: " + ec.message());
 
+    int db = sqlite3_open("chat.db", reinterpret_cast<sqlite3**>(&db_));
+    if (db != SQLITE_OK)
+    {
+        throw std::runtime_error("sqlite3_open failed");
+    }
+    init_db();
+
     log_line("INFO", "server", "listening");
+}
+
+Server::~Server()
+{
+    if (db_)
+    {
+        sqlite3_close(reinterpret_cast<sqlite3*>(db_));
+        db_ = nullptr;
+    }
 }
 
 void Server::start_accept()
@@ -110,6 +126,21 @@ void Server::prune_empty_room(const std::string& name)
     }
 }
 
+bool Server::is_user_exists(const std::string& username) const
+{
+
+}
+
+bool Server::insert_user(const std::string& username, const std::string& ha1_hex)
+{
+
+}
+
+std::optional<std::string> Server::get_ha1(const std::string& username) const
+{
+
+}
+
 void Server::do_accept()
 {
     auto socket = std::make_shared<tcp::socket>(acceptor_.get_executor());
@@ -132,4 +163,9 @@ void Server::on_accept(std::shared_ptr<boost::asio::ip::tcp::socket> socket, con
     log_line("INFO", "accept", "new session");
 
     session->start();
+}
+
+void Server::init_db()
+{
+
 }

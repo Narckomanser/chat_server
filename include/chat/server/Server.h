@@ -20,6 +20,7 @@ class Server : public std::enable_shared_from_this<Server>
 {
 public:
     Server(asio::io_context& context, uint16_t port);
+    ~Server();
 
     void start_accept();
     void remove_session(const std::shared_ptr<Session>& session);
@@ -34,11 +35,21 @@ public:
     std::shared_ptr<Room> find_room(const std::string& name) const;
     void prune_empty_room(const std::string& name);
 
+    bool is_user_exists(const std::string& username) const;
+    bool insert_user(const std::string& username, const std::string& ha1_hex);
+    std::optional<std::string> get_ha1(const std::string& username) const;
+    const std::string realm() { return realm_; }
+
 private:
     void do_accept();
     void on_accept(std::shared_ptr<tcp::socket> socket, const boost::system::error_code& ec);
 
+    void init_db();
+
 private:
+    void* db_ = nullptr;
+
+    std::string realm_ = "accused_chat";
     tcp::acceptor acceptor_;
     std::unordered_set<std::shared_ptr<Session>> sessions_;
     NickRegistry nick_registry_;

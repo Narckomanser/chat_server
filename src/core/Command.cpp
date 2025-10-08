@@ -4,6 +4,7 @@
 
 #include <chat/core/Message.h>
 #include <chat/core/Types.h>
+#include <chat/core/Crypto.h>
 #include <chat/server/Server.h>
 #include <chat/server/Session.h>
 #include <chat/server/Room.h>
@@ -37,6 +38,14 @@ ParsedCommand parse_command(std::string_view line)
         parsed_cmd.kind = commandKind::Msg;
     else if (cmd == "quit")
         parsed_cmd.kind = commandKind::Quit;
+    else if (cmd == "reg_req")
+        parsed_cmd.kind = commandKind::RegisterReq;
+    else if (cmd == "reg_resp")
+        parsed_cmd.kind = commandKind::RegisterResp;
+    else if (cmd == "auth_req")
+        parsed_cmd.kind = commandKind::AuthReq;
+    else if (cmd == "auth_resp")
+        parsed_cmd.kind = commandKind::AuthResp;
     else
         parsed_cmd.kind = commandKind::Unknown;
 
@@ -70,6 +79,15 @@ void CommandRegistry::register_cmd(const std::string& name, std::unique_ptr<ICom
 
 bool CommandRegistry::dispatch(Session& session, const ParsedCommand& command)
 {
+    const bool is_auth_cmd = command.kind == commandKind::RegisterReq || command.kind == commandKind::RegisterResp ||
+                             command.kind == commandKind::AuthReq || command.kind == commandKind::AuthResp;
+
+    if (!is_auth_cmd && !session.is_authenticated())
+    {
+        session.deliver(format_error("not authenticated; use /auth_req <user> or /reg_req <user>"));
+        return true;
+    }
+
     const char* key = nullptr;
     switch (command.kind)
     {
@@ -80,6 +98,10 @@ bool CommandRegistry::dispatch(Session& session, const ParsedCommand& command)
         case commandKind::Rooms: key = "rooms"; break;
         case commandKind::Msg: key = "msg"; break;
         case commandKind::Quit: key = "quit"; break;
+        case commandKind::RegisterReq: key = "reg_req"; break;
+        case commandKind::RegisterResp: key = "reg_resp"; break;
+        case commandKind::AuthReq: key = "auth_req"; break;
+        case commandKind::AuthResp: key = "auth_resp"; break;
         default: break;
     }
 
@@ -219,6 +241,136 @@ void QuitCommand::execute(Session& session, const std::vector<std::string>& args
     session.close();
 }
 
+void RegisterRequestCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+    if (args.empty())
+    {
+        session.deliver(format_error("usage: /reg_req <user>"));
+        return;
+    }
+
+    auto server = need_server(session);
+    if (!server) return;
+
+    const auto& user = args[0];
+    if (server->is_user_exists(user))
+    {
+        session.deliver(format_error("user already exists"));
+        return;
+    }
+
+    session.set_username(user);
+    session.set_nonce(crypto::random_hex());
+
+    session.deliver(format_info("REG_CHALLENGE realm=" + server->realm() + " nonce=" + session.get_nonce()));
+    session.deliver(format_info("send /reg_resp <user> <ha1_hex> <proof_hex> where proof=md5(ha1:nonce)"));
+}
+
+void RegisterResponseCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+    if (args.size() < 3)
+    {
+        session.deliver(format_error("usage: /reg_resp <user> <ha1_hex> <proof_hex>"));
+        return;
+    }
+
+    auto server = need_server(session);
+    if (!server) return;
+
+    const auto& user = args[0];
+    const auto& ha1 = args[1];
+    const auto& proof = args[2];
+
+    if (server->is_user_exists(user))
+    {
+        session.deliver(format_error("user already exists"));
+        return;
+    }
+
+    if (user != session.get_username() || session.get_nonce().empty())
+    {
+        session.deliver(format_error("registration handshake required; use /reg_req first"));
+        return;
+    }
+
+    const std::string expected = crypto::md5_hex(ha1 + ":" + session.get_nonce());
+    if (expected != proof)
+    {
+        session.deliver(format_error("registration failed (bad proof)"));
+        return;
+    }
+
+    if (!server->insert_user(user, ha1))
+    {
+        session.deliver(format_error("registration failed (db error)"));
+        return;
+    }
+
+    session.deliver(format_info("registration successful"));
+}
+
+void AuthRequestCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+    if (args.empty())
+    {
+        session.deliver(format_error("usage: /auth_req <user>"));
+        return;
+    }
+
+    auto server = need_server(session);
+    if (!server) return;
+
+    const auto& user = args[0];
+    if (!server->is_user_exists(user))
+    {
+        session.deliver(format_error("unknown user"));
+        return;
+    }
+
+    session.set_username(user);
+    session.set_nonce(crypto::random_hex());
+
+    session.deliver(format_info("AUTH_CHALLENGE realm=" + server->realm() + " nonce=" + session.get_nonce()));
+    session.deliver(format_info("send /auth_resp <user> <ha1_hex> <proof_hex> where response=md5(ha1:nonce)"));
+}
+
+void AuthRespCommand::execute(Session& session, const std::vector<std::string>& args)
+{
+    if (args.size() < 2)
+    {
+        session.deliver(format_error("usage: /auth_resp <user> <response_hex>"));
+        return;
+    }
+
+    auto server = need_server(session);
+    if (!server) return;
+
+    const auto& user = args[0];
+    const auto& response = args[1];
+
+    if (user != session.get_username() || session.get_nonce().empty())
+    {
+        session.deliver(format_error("auth handshake required; use /auth_req first"));
+        return;
+    }
+
+    const auto ha1_opt = server->get_ha1(user);
+    if (!ha1_opt)
+    {
+        session.deliver(format_error("unknown user"));
+        return;
+    }
+
+    const std::string expected = crypto::md5_hex(*ha1_opt + ":" + session.get_nonce());
+    if (expected != response)
+    {
+        session.deliver(format_error("authentication failed"));
+        return;
+    }
+
+    session.set_authenticated(true);
+    session.deliver(format_info("authentication successful"));
+}
 
 std::unique_ptr<CommandRegistry> build_default_registry(std::weak_ptr<Server> server)
 {
@@ -230,6 +382,10 @@ std::unique_ptr<CommandRegistry> build_default_registry(std::weak_ptr<Server> se
     reg->register_cmd("rooms", std::make_unique<RoomsCommand>());
     reg->register_cmd("msg", std::make_unique<MsgCommand>());
     reg->register_cmd("quit", std::make_unique<QuitCommand>());
+    reg->register_cmd("reg_req", std::make_unique<RegisterRequestCommand>());
+    reg->register_cmd("reg_resp", std::make_unique<RegisterResponseCommand>());
+    reg->register_cmd("auth_req", std::make_unique<AuthRequestCommand>());
+    reg->register_cmd("auth_resp", std::make_unique<AuthRespCommand>());
 
     return reg;
 }

@@ -38,6 +38,13 @@ public:
 
     bool allow_sending_now();
 
+    bool is_authenticated() const { return authenticated_; }
+    void set_authenticated(bool authenticated) { authenticated_ = authenticated; }
+    const std::string get_username() const { return username_; }
+    void set_username(const std::string username) { username_ = std::move(username); }
+    const std::string get_nonce() const { return nonce_; }
+    void set_nonce(const std::string nonce) { nonce_ = std::move(nonce); }
+
 private:
     void do_read_line();
     void on_read(const boost::system::error_code& ec);
@@ -55,4 +62,8 @@ private:
     std::weak_ptr<Room> room_;
     RateLimiter rate_;
     std::unique_ptr<CommandRegistry> registry_;
+
+    bool authenticated_ = false;
+    std::string username_;
+    std::string nonce_;
 };
