@@ -14,7 +14,7 @@ RUN useradd -m runner
 USER runner
 WORKDIR /app
 
-COPY --from=build /src/build/apps/chat_server/chat_server /usr/local/bin/chat_server
+COPY --from=build /_old/src/build/apps/chat_server/chat_server /usr/local/bin/chat_server
 
 EXPOSE 5555
 

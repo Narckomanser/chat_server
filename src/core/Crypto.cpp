@@ -1,11 +1,12 @@
 #include "chat/core/Crypto.h"
 
 #include <openssl/evp.h>
+#include <openssl/rand.h>
 
-#include <array>
-#include <sstream>
 #include <iomanip>
-#include <random>
+#include <sstream>
+#include <vector>
+#include <stdexcept>
 
 namespace crypto
 {
@@ -47,17 +48,25 @@ std::string md5_hex(const std::string& data)
 
 std::string random_hex(std::size_t n)
 {
-    static std::random_device random_device;
-    static std::mt19937_64 gen(random_device());
-    static std::uniform_int_distribution<int> dist(0, 15);
+    std::string out;
+    out.resize(n);
+
+    if (RAND_bytes(reinterpret_cast<unsigned char*>(&out[0]), (int)n) != 1)
+    {
+        throw std::runtime_error("RAND_bytes failed");
+    }
     static const char* hex = "0123456789abcdef";
 
-    std::string out;
-    out.resize(n * 2);
-    for (size_t i = 0; i < n * 2; i++)
+    std::string hexed;
+    hexed.resize(n * 2);
+
+    for (size_t i = 0; i < n; i++)
     {
-        out[i] = hex[dist(gen)];
+        unsigned char ch = static_cast<unsigned char>(out[i]);
+        hexed[2 * i] = hex[(ch >> 4) & 0xF];
+        hexed[2 * i + 1] = hex[ch & 0xF];
     }
-    return out;
+
+    return hexed;
 }
 }  // namespace crypto
