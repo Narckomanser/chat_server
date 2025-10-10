@@ -16,11 +16,17 @@ FetchContent_MakeAvailable(json)
 
 add_library(chat-core
         src/core/Crypto.cpp
+
         src/protocol/Aliases.cpp
         src/protocol/Router.cpp
-        src/infra/db/sqlite/UserRepository.cpp
+
+        src/infra/repos/UserRepository.cpp
         src/infra/security/NonceStore.cpp
+        src/infra/db/sqlite/SqliteDatabase.cpp
+        src/infra/db/dao/SqliteUserDao.cpp
+
         src/chat/app/services/AuthService.cpp
+
         src/transport/Server.cpp
         src/transport/Session.cpp
 )

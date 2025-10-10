@@ -1,9 +1,11 @@
 #include <chat/core/Log.h>
 #include <chat/transport/Server.h>
 #include <chat/protocol/Router.h>
-#include <chat/infra/db/sqlite/UserRepository.h>
+#include "chat/infra/repos/UserRepository.h"
 #include <chat/infra/security/NonceStore.h>
 #include <chat/app/services/AuthService.h>
+#include <chat/infra/db/sqlite/SqliteDatabase.h>
+#include <chat/infra/db/dao/SqliteUserDao.h>
 
 #include <boost/asio.hpp>
 #include <cstring>
@@ -39,10 +41,21 @@ int main(int argc, char** argv)
     {
         asio::io_context io;
 
-        auto users = std::make_shared<UserRepository>("chat.db");
+        auto db = std::make_shared<SqliteDatabase>("chat.db");
+        db->exec("PRAGMA journal_mode=WAL;");
+        db->exec("PRAGMA foreign_keys=ON;");
+
+        auto user_dao =  std::make_shared<SqliteUserDao>(db);
+        user_dao->ensureSchema();
+
+        UserRepository users_repo(*user_dao);
+
         auto nonces = std::make_shared<NonceStore>(nonce_ttl_sec);
-        auto auth_service = std::make_shared<AuthService>(*users, realm, *nonces);
+
+        auto auth_service = std::make_shared<AuthService>(users_repo, realm, *nonces);
+
         auto router = std::make_shared<Router>(auth_service);
+
         auto server = std::make_shared<Server>(io, port, tls_cert, tls_key, router);
 
         server->start();

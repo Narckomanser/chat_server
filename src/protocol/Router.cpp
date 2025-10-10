@@ -58,7 +58,7 @@ std::string Router::handle(const std::string& json_line, bool& authenticated, st
         auto nonce_opt = auth_->auth_challenge(user);
         if (!nonce_opt) return jerr("unknown_user", "user not found");
         username = user;
-        return auth_chal(auth_->get_realm(), *nonce_opt, 60);
+        return auth_chal(auth_->realm(), *nonce_opt, 60);
     }
 
     if (type == "auth_resp")

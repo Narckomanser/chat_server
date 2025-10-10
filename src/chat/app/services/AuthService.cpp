@@ -2,7 +2,7 @@
 
 std::optional<std::string> AuthService::auth_challenge(std::string_view username)
 {
-    if (!users_.is_exist(username)) return std::nullopt;
+    if (!users_.exists(std::string(username))) return std::nullopt;
     auto nonce = crypto::random_hex();
     nonces_.put(std::string(username), nonce);
 
@@ -11,7 +11,7 @@ std::optional<std::string> AuthService::auth_challenge(std::string_view username
 
 bool AuthService::auth_complete(std::string_view username, std::string_view response_hex)
 {
-    auto user = users_.get_user(username);
+    auto user = users_.get(std::string(username));
     if (!user) return false;
 
     auto nonce = nonces_.consume(std::string(username));
