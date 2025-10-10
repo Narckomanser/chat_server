@@ -1,81 +1,65 @@
 #include <chat/protocol/Router.h>
-
-#include "chat/app/services/AuthService.h"
+#include <chat/protocol/JsonCodec.h>
+#include <chat/app/services/AuthService.h>
+#include <chat/protocol/Dto.h>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-static std::string jerr(const std::string& code, const std::string& msg)
+static std::string to_line(const Envelope& e)
 {
-    json j;
-    j["type"] = "error";
-    j["payload"] = {{"code", code}, {"message", msg}};
-    return j.dump() + "\n";
+    return JsonCodec::to_line(e);
 }
-static std::string jinfo(const std::string& text)
-{
-    json j;
-    j["type"] = "info";
-    j["payload"] = {{"text", text}};
-    return j.dump() + "\n";
-}
-static std::string auth_chal(const std::string& realm, const std::string& nonce, int ttl)
-{
-    json j;
-    j["type"] = "auth_challenge";
-    j["payload"] = {{"realm", realm}, {"nonce", nonce}, {"ttl", ttl}};
-    return j.dump() + "\n";
-}
-
-Router::Router(std::shared_ptr<AuthService> auth) : auth_(auth) {}
 
 std::string Router::handle(const std::string& json_line, bool& authenticated, std::string& username)
 {
-    json in;
-    try
+    auto env = JsonCodec::from_line(json_line);
+    if (!env) return to_line(Envelope::error("bad_json", "cannot parse"));
+
+    switch (env->type)
     {
-        in = json::parse(json_line);
+        case MsgType::Quit: return to_line(Envelope::info("bye"));
+
+        case MsgType::Auth:
+        {
+            // payload → DTO
+            AuthReq req{};
+            try
+            {
+                req = env->payload.get<AuthReq>();
+            }
+            catch (...)
+            {
+                return to_line(Envelope::error("usage", "auth: need user"));
+            }
+
+            auto nonce_opt = auth_->auth_challenge(req.user);
+            if (!nonce_opt) return to_line(Envelope::error("unknown_user", "user not found"));
+            username = req.user;
+            return to_line(Envelope::auth_challenge(auth_->realm(), *nonce_opt, 60));
+        }
+
+        case MsgType::AuthResp:
+        {
+            AuthRespReq req{};
+            try
+            {
+                req = env->payload.get<AuthRespReq>();
+            }
+            catch (...)
+            {
+                return to_line(Envelope::error("usage", "auth_resp: user,response"));
+            }
+
+            if (!auth_->auth_complete(req.user, req.response)) return to_line(Envelope::error("auth_failed", "bad credentials"));
+
+            authenticated = true;
+            username = req.user;
+            return to_line(Envelope::info("authentication successful"));
+        }
+
+        default:
+            if (!authenticated) return to_line(Envelope::error("not_authenticated", "login first"));
+            return to_line(Envelope::error("unknown_type", "not implemented"));
     }
-    catch (...)
-    {
-        return jerr("bad_json", "cannot parse");
-    }
-
-    const auto type_it = in.find("type");
-    if (type_it == in.end() || !type_it->is_string()) return jerr("bad_request", "missing type");
-    const std::string type = *type_it;
-
-    if (type == "quit")
-    {
-        return jinfo("bye");
-    }
-
-    if (type == "auth")
-    {
-        auto& pl = in["payload"];
-        if (!pl.contains("user")) return jerr("usage", "auth: need user");
-        std::string user = pl["user"];
-        auto nonce_opt = auth_->auth_challenge(user);
-        if (!nonce_opt) return jerr("unknown_user", "user not found");
-        username = user;
-        return auth_chal(auth_->realm(), *nonce_opt, 60);
-    }
-
-    if (type == "auth_resp")
-    {
-        auto& pl = in["payload"];
-        if (!pl.contains("user") || !pl.contains("response")) return jerr("usage", "auth_resp: need user,response");
-        std::string user = pl["user"];
-        std::string resp = pl["response"];
-        if (!auth_->auth_complete(user, resp)) return jerr("auth_failed", "bad credentials");
-        authenticated = true;
-        username = user;
-        return jinfo("authentication successful");
-    }
-
-    // неавторизованные команды — резать здесь (позже whitelist расширим)
-    if (!authenticated) return jerr("not_authenticated", "login first");
-
-    // сюда добавим join/msg/pm/rooms в следующих шагах
-    return jerr("unknown_type", "not implemented");
 }

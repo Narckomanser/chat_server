@@ -29,6 +29,11 @@ add_library(chat-core
 
         src/transport/Server.cpp
         src/transport/Session.cpp
+        include/chat/protocol/MessageTypes.h
+        src/protocol/Dto.cpp
+        include/chat/protocol/Dto.h
+        src/protocol/JsonCodec.cpp
+        include/chat/protocol/JsonCodec.h
 )
 
 target_include_directories(chat-core
