@@ -6,9 +6,9 @@
 #include <chat/protocol/JsonCodec.h>
 #include <chat/core/Log.h>
 
-Session::Session(tcp::socket&& socket, std::shared_ptr<Server> server)  //
+Session::Session(tcp::socket&& socket, const std::shared_ptr<Server>& server)  //
     : stream_(std::move(socket), server->get_tls_ctx()),                //
-      server_(std::move(server)),                                       //
+      server_(server),                                       //
       writer_(stream_)
 {
 }

@@ -41,9 +41,8 @@ int main(int argc, char** argv)
     {
         asio::io_context io;
 
-        auto db = std::make_shared<SqliteDatabase>("chat.db");
-        db->exec("PRAGMA journal_mode=WAL;");
-        db->exec("PRAGMA foreign_keys=ON;");
+        SqliteConfig db_conf{true, true, 3000};
+        auto db = SqliteDatabase::open("chat.db", db_conf);
 
         auto user_dao =  std::make_shared<SqliteUserDao>(db);
         user_dao->ensureSchema();

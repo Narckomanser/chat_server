@@ -18,7 +18,7 @@ class Server;
 class Session : public std::enable_shared_from_this<Session>
 {
 public:
-    Session(tcp::socket&& socket, std::shared_ptr<Server> server);
+    Session(tcp::socket&& socket, const std::shared_ptr<Server>& server);
 
     void start();
     void close();

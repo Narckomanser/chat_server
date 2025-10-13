@@ -1,22 +1,27 @@
 #include <chat/infra/db/sqlite/SqliteDatabase.h>
 
 #include <stdexcept>
+#include <string>
 
-static void throw_if(int rc, sqlite3* db, const char* where)
+namespace
+{
+[[noreturn]] void throw_sqlite(sqlite3* db, const char* where)
+{
+    const char* msg = sqlite3_errmsg(db);
+    throw std::runtime_error(std::string(where) + ": " + (msg ? msg : "unknown sqlite error"));
+}
+
+inline void check_ok(int rc, sqlite3* db, const char* where)
 {
     if (rc != SQLITE_OK && rc != SQLITE_DONE && rc != SQLITE_ROW)
     {
-        const char* msg = sqlite3_errmsg(db);
-        throw std::runtime_error(std::string(where) + ": " + (msg ? msg : "unknown sqlite error"));
+        throw_sqlite(db, where);
     }
 }
+}  // namespace
 
 /*SqliteStatement*/
-SqliteStatement::SqliteStatement(sqlite3* db, const std::string& sql) : db_(db)
-{
-    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt_, nullptr);
-    if (rc != SQLITE_OK) throw_if(rc, db_, "sqlite3_prepare_v2");
-}
+SqliteStatement::SqliteStatement(sqlite3* db, sqlite3_stmt* stmt) noexcept : db_(db), stmt_(stmt) {}
 
 SqliteStatement::~SqliteStatement()
 {
@@ -26,13 +31,13 @@ SqliteStatement::~SqliteStatement()
 void SqliteStatement::bind(int idx, const std::string& v)
 {
     int rc = sqlite3_bind_text(stmt_, idx, v.c_str(), -1, SQLITE_TRANSIENT);
-    throw_if(rc, db_, "sqlite3_bind_text");
+    check_ok(rc, db_, "sqlite3_bind_text");
 }
 
 void SqliteStatement::bind(int idx, int64_t v)
 {
     int rc = sqlite3_bind_int64(stmt_, idx, v);
-    throw_if(rc, db_, "sqlite3_bind_int64");
+    check_ok(rc, db_, "sqlite3_bind_int64");
 }
 
 bool SqliteStatement::step()
@@ -40,15 +45,14 @@ bool SqliteStatement::step()
     int rc = sqlite3_step(stmt_);
     if (rc == SQLITE_ROW) return true;
     if (rc == SQLITE_DONE) return false;
-    throw_if(rc, db_, "sqlite3_step");
+    check_ok(rc, db_, "sqlite3_step");
     return false;
 }
 
 void SqliteStatement::reset()
 {
-    int rc = sqlite3_reset(stmt_);
-    throw_if(rc, db_, "sqlite3_reset");
-    sqlite3_clear_bindings(stmt_);
+    check_ok(sqlite3_reset(stmt_), db_, "sqlite3_reset");
+    check_ok(sqlite3_clear_bindings(stmt_), db_, "sqlite3_clear_bindings");
 }
 
 std::string SqliteStatement::column_text(int idx)
@@ -63,35 +67,65 @@ int64_t SqliteStatement::column_int64(int idx)
 }
 
 /*SqliteDatabase*/
-SqliteDatabase::SqliteDatabase(const std::string& file)
+std::shared_ptr<SqliteDatabase> SqliteDatabase::open(const std::string& path, const SqliteConfig& conf)
 {
-    int rc = sqlite3_open(file.c_str(), &db_);
-    if (rc != SQLITE_OK) throw_if(rc, db_, "sqlite3_open");
-    exec("PRAGMA journal_mode=WAL;");
-    exec("PRAGMA foreign_keys=ON;");
-    exec("PRAGMA busy_timeout=3000;");
+    auto db = std::shared_ptr<SqliteDatabase>(new SqliteDatabase());
+    db->open_impl(path);
+    db->apply_config(conf);
+
+    return db;
+}
+
+void SqliteDatabase::open_impl(const std::string& path)
+{
+    const int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
+    sqlite3* tmp = nullptr;
+    int rc = sqlite3_open_v2(path.c_str(), &tmp, flags, nullptr);
+    if (rc != SQLITE_OK)
+    {
+        if (tmp) sqlite3_close(tmp);
+        throw std::runtime_error("sqlite3_open_v2 failed: " + std::to_string(rc));
+    }
+    db_ = tmp;
+    path_ = path;
+}
+
+void SqliteDatabase::apply_config(const SqliteConfig& conf)
+{
+    auto st = prepare("PRAGMA busy_timeout=?;");
+    st->bind(1, static_cast<int64_t>(conf.busy_timeout_ms));
+    (void)st->step();
+
+    if (conf.enable_foreign_key) exec("PRAGMA foreign_keys=ON;");
+    if (conf.wal_journal) exec("PRAGMA journal_mode=WAL;");
 }
 
 SqliteDatabase::~SqliteDatabase()
 {
-    if (db_) sqlite3_close(db_);
-    db_ = nullptr;
+    if (db_)
+    {
+        sqlite3_close(db_);
+        db_ = nullptr;
+    }
 }
 
 void SqliteDatabase::exec(const std::string& sql)
 {
     char* err = nullptr;
-    int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err);
+    const int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err);
     if (rc != SQLITE_OK)
     {
         sqlite3_free(err);
-        throw_if(rc, db_, "sqlite3_exec");
+        check_ok(rc, db_, "sqlite3_exec");
     }
 }
 
 std::unique_ptr<IStatement> SqliteDatabase::prepare(const std::string& sql)
 {
-    return std::make_unique<SqliteStatement>(db_, sql);
+    sqlite3_stmt* stmt = nullptr;
+    const int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+    if (rc != SQLITE_OK) throw_sqlite(db_, "sqlite3_prepare_v2");
+    return std::make_unique<SqliteStatement>(db_, stmt);
 }
 
 void SqliteDatabase::withTransaction(std::function<void()>& work)

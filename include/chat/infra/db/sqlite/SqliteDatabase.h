@@ -5,12 +5,26 @@
 #include <sqlite3.h>
 #include <memory>
 #include <string>
+#include <functional>
+#include <cstdint>
+
+struct SqliteConfig
+{
+    bool enable_foreign_key = false;
+    bool wal_journal = true;
+    int busy_timeout_ms = 3000;
+};
 
 class SqliteStatement : public IStatement
 {
 public:
-    explicit SqliteStatement(sqlite3* db, const std::string& sql);
-    ~SqliteStatement();
+    SqliteStatement(sqlite3* db, sqlite3_stmt* stmt) noexcept;
+    ~SqliteStatement() override;
+
+    SqliteStatement(SqliteStatement&) = delete;
+    SqliteStatement(SqliteStatement&&) = delete;
+    SqliteStatement& operator=(const SqliteStatement&) = delete;
+    SqliteStatement& operator=(const SqliteStatement&&) = delete;
 
     void bind(int idx, int64_t v) override;
     void bind(int idx, const std::string& v) override;
@@ -26,16 +40,31 @@ private:
 
 class SqliteDatabase : public IDatabase
 {
+private:
+    SqliteDatabase() = default;
+
 public:
-    explicit SqliteDatabase(const std::string& file);
-    ~SqliteDatabase();
+    ~SqliteDatabase() override;
+
+    SqliteDatabase(SqliteDatabase&) = delete;
+    SqliteDatabase(SqliteDatabase&&) = delete;
+    SqliteDatabase& operator=(const SqliteDatabase&) = delete;
+    SqliteDatabase& operator=(const SqliteDatabase&&) = delete;
+
+    static std::shared_ptr<SqliteDatabase> open(const std::string& path, const SqliteConfig& conf = {});
 
     void exec(const std::string& sql) override;
     std::unique_ptr<IStatement> prepare(const std::string& sql) override;
     void withTransaction(std::function<void()>& work) override;
 
-    sqlite3* row() const { return db_; }
+    sqlite3* row() const noexcept { return db_; }
+    const std::string& path() const noexcept { return path_; };
+
+private:
+    void open_impl(const std::string& path);
+    void apply_config(const SqliteConfig& conf);
 
 private:
     sqlite3* db_{nullptr};
+    std::string path_;
 };
