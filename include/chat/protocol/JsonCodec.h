@@ -3,7 +3,7 @@
 #include <string>
 #include <optional>
 #include <nlohmann/json.hpp>
-#include <chat/protocol/Dto.h>
+#include "chat/protocol/dto/Dto.h"
 
 class JsonCodec
 {

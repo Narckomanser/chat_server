@@ -9,9 +9,9 @@ class UserRepository
 public:
     explicit UserRepository(IUserDao& dao);
 
-    bool exists(const std::string& user);
-    std::optional<UserRow> get(const std::string& user);
-    bool insert(const UserRow& user);
+    bool Exists(const std::string& user);
+    std::optional<UserRow> Get(const std::string& user);
+    bool Insert(const UserRow& user);
     void EnsureSchema();
 
 private:

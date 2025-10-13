@@ -15,8 +15,8 @@ public:
     {
     }
 
-    std::optional<std::string> auth_challenge(std::string_view username);
-    bool auth_complete(std::string_view username, std::string_view response_hex);
+    std::optional<std::string> AuthChallenge(std::string_view username);
+    bool AuthComplete(std::string_view username, std::string_view response_hex);
 
     const std::string& realm() const { return realm_; }
 

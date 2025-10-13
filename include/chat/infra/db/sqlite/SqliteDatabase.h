@@ -10,7 +10,7 @@
 
 struct SqliteConfig
 {
-    bool enable_foreign_key = false;
+    bool enable_foreign_keys = false;
     bool wal_journal = true;
     int busy_timeout_ms = 3000;
 };

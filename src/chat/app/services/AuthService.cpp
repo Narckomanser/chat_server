@@ -1,17 +1,17 @@
 #include "chat/app/services/AuthService.h"
 
-std::optional<std::string> AuthService::auth_challenge(std::string_view username)
+std::optional<std::string> AuthService::AuthChallenge(std::string_view username)
 {
-    if (!users_.exists(std::string(username))) return std::nullopt;
+    if (!users_.Exists(std::string(username))) return std::nullopt;
     auto nonce = crypto::random_hex();
     nonces_.put(std::string(username), nonce);
 
     return nonce;
 }
 
-bool AuthService::auth_complete(std::string_view username, std::string_view response_hex)
+bool AuthService::AuthComplete(std::string_view username, std::string_view response_hex)
 {
-    auto user = users_.get(std::string(username));
+    auto user = users_.Get(std::string(username));
     if (!user) return false;
 
     auto nonce = nonces_.consume(std::string(username));

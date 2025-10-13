@@ -2,12 +2,12 @@
 
 UserRepository::UserRepository(IUserDao& dao) : dao_(dao) {}
 
-bool UserRepository::exists(const std::string& user)
+bool UserRepository::Exists(const std::string& user)
 {
     return dao_.exists(user);
 }
 
-std::optional<UserRow> UserRepository::get(const std::string& user)
+std::optional<UserRow> UserRepository::Get(const std::string& user)
 {
     auto row = dao_.get(user);
     if (!row) return std::nullopt;
@@ -15,7 +15,7 @@ std::optional<UserRow> UserRepository::get(const std::string& user)
     return row;
 }
 
-bool UserRepository::insert(const UserRow& user)
+bool UserRepository::Insert(const UserRow& user)
 {
     return dao_.insert(user);
 }

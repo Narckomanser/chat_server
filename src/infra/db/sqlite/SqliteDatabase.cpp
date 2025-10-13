@@ -90,14 +90,30 @@ void SqliteDatabase::open_impl(const std::string& path)
     path_ = path;
 }
 
-void SqliteDatabase::apply_config(const SqliteConfig& conf)
+void SqliteDatabase::apply_config(const SqliteConfig& cfg)
 {
-    auto st = prepare("PRAGMA busy_timeout=?;");
-    st->bind(1, static_cast<int64_t>(conf.busy_timeout_ms));
-    (void)st->step();
+    if (sqlite3_busy_timeout(db_, cfg.busy_timeout_ms) != SQLITE_OK)
+    {
+        throw_sqlite(db_, "sqlite3_busy_timeout");
+    }
 
-    if (conf.enable_foreign_key) exec("PRAGMA foreign_keys=ON;");
-    if (conf.wal_journal) exec("PRAGMA journal_mode=WAL;");
+    if (cfg.enable_foreign_keys)
+    {
+        exec("PRAGMA foreign_keys=ON;");
+    }
+    else
+    {
+        exec("PRAGMA foreign_keys=OFF;");
+    }
+    
+    if (cfg.wal_journal)
+    {
+        exec("PRAGMA journal_mode=WAL;");
+    }
+    else
+    {
+        exec("PRAGMA journal_mode=DELETE;");
+    }
 }
 
 SqliteDatabase::~SqliteDatabase()
