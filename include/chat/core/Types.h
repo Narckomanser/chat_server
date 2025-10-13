@@ -51,7 +51,7 @@ struct RoomName
         static const std::regex re("^[A-Za-z0-9_-]{2,20}$");
         if (!std::regex_match(std::string(sv), re)) return std::string("invalid room name");
 
-        return std::nullopt;
+        return std::string(sv);
     }
 
     static std::optional<RoomName> parse(std::string s)
